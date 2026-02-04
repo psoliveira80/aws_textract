@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+temp_data/
+temp/
+*.csv
+*.xlsx
+.venv/
+.dockerignore
+lab/
+aws/

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8" />
+        <title>AWS Textract Pro</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body
+        class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4"
+    >
+        <div
+            class="max-w-xl w-full bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700"
+        >
+            <h1 class="text-3_xl font-bold mb-6 text-blue-400">
+                Extração de Tabelas PDF
+            </h1>
+
+            <form id="uploadForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1"
+                        >Documento PDF (máx 50MB)</label
+                    >
+                    <input
+                        type="file"
+                        id="pdfFile"
+                        accept=".pdf"
+                        required
+                        class="w-full bg-gray-700 p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1"
+                        >Intervalo de Páginas (ex: 1-5)</label
+                    >
+                    <input
+                        type="text"
+                        id="intervalo"
+                        placeholder="1-10"
+                        required
+                        class="w-full bg-gray-700 p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition duration-200"
+                >
+                    Processar Agora
+                </button>
+            </form>
+
+            <div id="progressContainer" class="mt-8 hidden">
+                <div class="w-full bg-gray-700 rounded-full h-4 mb-2">
+                    <div
+                        id="progressBar"
+                        class="bg-blue-500 h-4 rounded-full transition-all duration-300"
+                        style="width: 0%"
+                    ></div>
+                </div>
+                <p id="statusText" class="text-xs text-gray-400 italic">
+                    Iniciando...
+                </p>
+            </div>
+
+            <div
+                id="logConsole"
+                class="mt-6 bg-black p-4 rounded-lg h-48 overflow-y-auto font-mono text-xs border border-gray-700"
+            >
+                <div class="text-green-500">> Aguardando arquivo...</div>
+            </div>
+        </div>
+
+        <script>
+            const form = document.getElementById("uploadForm");
+            const consoleLog = document.getElementById("logConsole");
+
+            function addLog(msg, color = "text-green-500") {
+                const div = document.createElement("div");
+                div.className = color;
+                div.innerText = `> [${new Date().toLocaleTimeString()}] ${msg}`;
+                consoleLog.appendChild(div);
+                consoleLog.scrollTop = consoleLog.scrollHeight;
+            }
+
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const formData = new FormData();
+                formData.append(
+                    "arquivo",
+                    document.getElementById("pdfFile").files[0],
+                );
+                formData.append(
+                    "intervalo",
+                    document.getElementById("intervalo").value,
+                );
+
+                document
+                    .getElementById("progressContainer")
+                    .classList.remove("hidden");
+                addLog("Iniciando upload do arquivo...");
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", "/processar_textract", true);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        document.getElementById("progressBar").style.width =
+                            percent + "%";
+                        document.getElementById("statusText").innerText =
+                            `Enviando: ${Math.round(percent)}%`;
+                    }
+                };
+
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        addLog("Processamento concluído com sucesso!");
+                        // const blob = new Blob([xhr.response], {
+                        //     type: "text/csv",
+                        // });
+                        // const url = window.URL.createObjectURL(blob);
+                        // const a = document.createElement("a");
+                        // a.href = url;
+                        // a.download = "extraido.csv";
+                        // a.click();
+                        // addLog("Download iniciado.", "text-blue-400");
+                        
+                        addLog("Processamento concluído!");
+                        const blob = new Blob([xhr.response], {
+                            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "dados_extraidos.xlsx"; // Extensão alterada
+                        a.click();
+                        addLog("Arquivo Excel baixado.", "text-blue-400");
+
+                    } else {
+                        // Como a resposta é um Blob, precisamos ler como texto para ver o erro JSON
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            try {
+                                const errorData = JSON.parse(reader.result);
+                                addLog(
+                                    "ERRO AWS: " +
+                                        (errorData.detail ||
+                                            "Erro desconhecido"),
+                                    "text-red-500",
+                                );
+                            } catch (e) {
+                                addLog(
+                                    "ERRO CRÍTICO: " + reader.result,
+                                    "text-red-500",
+                                );
+                            }
+                        };
+                        reader.readAsText(xhr.response);
+                    }
+                };
+
+                xhr.responseType = "blob";
+                xhr.send(formData);
+                addLog(
+                    "Arquivo enviado. Aguardando resposta da AWS (pode levar alguns minutos)...",
+                    "text-yellow-400",
+                );
+            };
+        </script>
+    </body>
+</html>

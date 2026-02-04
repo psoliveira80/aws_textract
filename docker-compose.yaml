@@ -1,0 +1,26 @@
+version: '3.0'
+
+services:
+  extrator_tabela:
+    container_name: extrator_tabela
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./app:/app
+    restart: always
+    ports:
+      - "5003:5000"
+    env_file:
+      - .env
+    networks:
+      - extrator_tabela
+    mem_limit: 2048m  # Limit RAM to 512MB
+    cpus: "1.0"  # Limit CPU usage to 1 core
+
+    #command: python app.py
+    #entrypoint: ["python", "./app/main.py"]
+
+networks:
+  extrator_tabela:
+    driver: bridge
