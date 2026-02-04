@@ -11,8 +11,11 @@ services:
     restart: always
     ports:
       - "5003:5000"
-    env_file:
-      - .env
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
     networks:
       - extrator_tabela
     mem_limit: 2048m  # Limit RAM to 512MB
