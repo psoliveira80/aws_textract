@@ -3,27 +3,32 @@ version: '3.0'
 services:
   extrator_tabela:
     container_name: extrator_tabela
+    # O build será feito a partir do repositório Git no Portainer
     build:
       context: .
       dockerfile: ./Dockerfile
-    volumes:
-      - ./app:/app
     restart: always
-    ports:
-      - "5003:5000"
+    # REMOVIDO: volumes (Não use volumes para o código em produção)
+    # REMOVIDO: ports (O Traefik cuidará do roteamento interno)
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
     networks:
-      - extrator_tabela
-    mem_limit: 2048m  # Limit RAM to 512MB
-    cpus: "1.0"  # Limit CPU usage to 1 core
-
-    #command: python app.py
-    #entrypoint: ["python", "./app/main.py"]
+      - network_public
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+          cpus: "1.0"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.textract.rule=Host(`textract.megaflow.com.br`)"
+        - "traefik.http.routers.textract.entrypoints=websecure"
+        - "traefik.http.routers.textract.tls.certresolver=letsencrypt"
+        - "traefik.http.services.textract.loadbalancer.server.port=5000"
 
 networks:
-  extrator_tabela:
-    driver: bridge
+  network_public:
+    external: true 
